@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -116,7 +116,7 @@
                 $('#upload').prop("disabled", true);
 
                 var val = $('input[name=options]:checked').val();
-                var url = "//imagehunt.mandrillon.fr/api/Ingress/" + val;
+                var url = "api/Ingress/" + val;
 
                 $.ajax({
                     type: "POST",
