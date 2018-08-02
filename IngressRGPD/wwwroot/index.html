@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>UPC/UPV</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+
+    <!-- Material Design for Bootstrap fonts and icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons">
+    <!-- Material Design for Bootstrap CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/bootstrap-material-design@4.1.1/dist/css/bootstrap-material-design.min.css"
+        integrity="sha384-wXznGJNEXNG1NFsbm0ugrLFMQPWswR3lds2VeinahP8N0zJw9VWSopbjv2x7WCvX" crossorigin="anonymous">
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.3/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.3/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+
+    <style>
+        #map {
+            width: 100%;
+            height: 500px;
+        }
+
+        .card-centered {
+            width: 100%;
+            margin: auto;
+        }
+
+        body {
+            padding: 2%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="alert alert-danger" id="error_msg" role="alert" style="display: none">
+    </div>
+    <!-- Card -->
+    <div class="card card-centered">
+        <div class="card-img-top" id="map"></div>
+        <div class="card-body">
+            <h5 class="card-title">UPC / UPV Heatmap</h5>
+            <div class="row">
+                <div class="col-md-2">
+                    <div class="btn-group btn-group-toggle" data-toggle="buttons">
+                        <label class="btn btn-secondary active">
+                            <input type="radio" name="options" id="upc" value="upc" autocomplete="off" checked> UPC
+                        </label>
+                        <label class="btn btn-secondary">
+                            <input type="radio" name="options" id="upv" value="upv" autocomplete="off"> UPV
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-10">
+                    <form method="POST" enctype="multipart/form-data" id="ingressFilesForm">
+                        <div class="form-group">
+                            <!-- <label for="ingressFiles">Your game_log.stv</label> -->
+                            <input type="file" class="form-control-file" id="ingressFiles" name="ingressFiles" style="padding-top: 15px;">
+                        </div>
+                    </form>
+                    <a id="upload" href="#" class="btn btn-outline-primary">Upload</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- <script src="myportals.js"></script> -->
+
+    <script>
+        // addressPoints = addressPoints.map(function (p) { return [p[0], p[1]]; });
+        // var heat = L.heatLayer(addressPoints).addTo(map);
+    </script>
+
+    <!-- SCRIPTS -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/popper.js@1.12.6/dist/umd/popper.js" integrity="sha384-fA23ZRQ3G/J53mElWqVJEGJzU0sTs+SvzG8fXVWP+kJQ1lwFAOkcUOysnlKJC33U"
+        crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/bootstrap-material-design@4.1.1/dist/js/bootstrap-material-design.js" integrity="sha384-CauSuKpEqAFajSpkdjv3z9t8E7RlpJ1UP0lKM/+NdtSarroVKu069AlsRPKkFBz9"
+        crossorigin="anonymous"></script>
+
+    <script>
+        var hmData = {};
+
+        $(document).ready(function () {
+            $('body').bootstrapMaterialDesign();
+
+            $("#error_msg").hide();
+
+            var map = L.map('map').setView([48.8588536, 2.3119549], 12);
+            var tiles = L.tileLayer(
+                'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
+                    subdomains: 'abcd',
+                    maxZoom: 19
+                }).addTo(map);
+            var heat = L.heatLayer([]).addTo(map);
+
+
+            $('input[name=options]').change(function() {
+                var data = hmData[$(this).val()];
+                if(data != undefined) {
+                    heat.setLatLngs(data);
+                }
+            });
+
+            $('#upload').click(function () {
+                var form = $('#ingressFilesForm')[0];
+                var data = new FormData(form);
+
+                $('#upload').prop("disabled", true);
+
+                var val = $('input[name=options]:checked').val();
+                var url = "//imagehunt.mandrillon.fr/api/Ingress/" + val;
+
+                $.ajax({
+                    type: "POST",
+                    enctype: 'multipart/form-data',
+                    url: url,
+                    data: data,
+                    processData: false,
+                    contentType: false,
+                    cache: false,
+                    timeout: 300000, // 5 mins max
+                    success: function (data) {
+                        //console.log("SUCCESS : ", data);
+                        
+                        hmData[val] = data;
+                        heat.setLatLngs(hmData[val]);
+
+                        $("#upload").prop("disabled", false);
+                    },
+                    error: function (e, textStatus) {
+                        console.log("ERROR : ", e);
+
+                        $("#error_msg").text(textStatus);
+                        $("#error_msg").show();
+
+                        $("#upload").prop("disabled", false);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>
