@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <title>UPC/UPV</title>
+    <title>UPC/UPV Heatmap</title>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -22,7 +22,7 @@
     <style>
         #map {
             width: 100%;
-            height: 500px;
+            height: 480px;
         }
 
         .card-centered {
@@ -63,6 +63,7 @@
                         </div>
                     </form>
                     <a id="upload" href="#" class="btn btn-outline-primary">Upload</a>
+                    <img src="img/loader.gif" id="loading" style="display: none;" />
                 </div>
             </div>
         </div>
@@ -89,6 +90,16 @@
 
         $(document).ready(function () {
             $('body').bootstrapMaterialDesign();
+            $.ajaxSetup({
+                beforeSend: function () {
+                    $("#loading").show();
+                    $("#upload").hide();
+                },
+                complete: function () {
+                    $("#loading").hide();
+                    $("#upload").show();
+                }
+            });
 
             $("#error_msg").hide();
 
@@ -99,12 +110,12 @@
                     subdomains: 'abcd',
                     maxZoom: 19
                 }).addTo(map);
-            var heat = L.heatLayer([]).addTo(map);
+            var heat = L.heatLayer([], { radius: 15, minOpacity: 0.3 }).addTo(map);
 
 
-            $('input[name=options]').change(function() {
+            $('input[name=options]').change(function () {
                 var data = hmData[$(this).val()];
-                if(data != undefined) {
+                if (data != undefined) {
                     heat.setLatLngs(data);
                 }
             });
@@ -112,8 +123,6 @@
             $('#upload').click(function () {
                 var form = $('#ingressFilesForm')[0];
                 var data = new FormData(form);
-
-                $('#upload').prop("disabled", true);
 
                 var val = $('input[name=options]:checked').val();
                 var url = "api/Ingress/" + val;
@@ -129,19 +138,13 @@
                     timeout: 300000, // 5 mins max
                     success: function (data) {
                         //console.log("SUCCESS : ", data);
-                        
                         hmData[val] = data;
                         heat.setLatLngs(hmData[val]);
-
-                        $("#upload").prop("disabled", false);
                     },
                     error: function (e, textStatus) {
                         console.log("ERROR : ", e);
-
                         $("#error_msg").text(textStatus);
                         $("#error_msg").show();
-
-                        $("#upload").prop("disabled", false);
                     }
                 });
             });
