@@ -25,11 +25,11 @@
             height: 480px;
         }
 
-        #ingressFiles {
+        #ingress_files {
             padding-top: 15px;
         }
 
-        #download_iitc {
+        #export {
             margin-top: 10px;
         }
 
@@ -54,16 +54,16 @@
             <h5 class="card-title">UPC / UPV Heatmap</h5>
             <div class="row">
                 <div class="col-md-3">
-                    <form method="POST" enctype="multipart/form-data" id="ingressFilesForm">
+                    <form method="POST" enctype="multipart/form-data" id="ingress_files_form">
                         <div class="form-group">
                             <!-- <label for="ingressFiles">Your game_log.stv</label> -->
-                            <input type="file" class="form-control-file" id="ingressFiles" name="ingressFiles">
+                            <input type="file" class="form-control-file" id="ingress_files" name="ingressFiles">
                         </div>
                     </form>
                     <a id="upload" href="#" class="btn btn-outline-secondary">Upload</a>
                     <img src="img/loader.gif" id="loading" style="display: none;" />
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-4">
                     <div class="btn-group btn-group-toggle" data-toggle="buttons">
                         <label class="btn btn-secondary active">
                             <input type="radio" name="options" id="upc" value="upc" autocomplete="off" checked> UPC
@@ -71,11 +71,15 @@
                         <label class="btn btn-secondary">
                             <input type="radio" name="options" id="upv" value="upv" autocomplete="off"> UPV
                         </label>
+                        <label class="btn btn-secondary">
+                            <input type="radio" name="options" id="diff" value="diff" autocomplete="off"> UPC/UPV Difference
+                        </label>            
                     </div>
+                    <div id="rate"></div>
                 </div>
-                <div class="col-md-7">
-                    <a id="download_iitc" href="#" class="btn btn-secondary">Export to IITC</a>
-                </div>
+                <div class="col-md-5">
+                    <a id="export" href="#" class="btn btn-secondary">Export</a>
+                </div>           
             </div>
         </div>
     </div>
@@ -123,31 +127,31 @@
                 }
             });
 
-            $('#download_iitc').click(function() {
+            $('#export').click(function () {
                 var val = $('input[name=options]:checked').val();
-                if(hmData[val] == undefined) {
-                    console.log("DATA FOR '" + val +"'IS ABSENT");
+                if (hmData[val] == undefined) {
+                    console.log("DATA FOR '" + val + "'IS ABSENT");
                     return;
-                }                
-                var exportData = btoa(hmData[val].map(function(v) {
-                            return v[0] + ";" + v[1];
-                        }).join("\r\n"));                
-                if(exportData != null && exportData !== "") {
+                }
+                var exportData = btoa(hmData[val].map(function (v) {
+                    return v[0] + ";" + v[1];
+                }).join("\r\n"));
+                if (exportData != null && exportData !== "") {
                     $(this).attr('target', '_blank');
-                    $(this).attr('download', 'export_iitc_' + val + '.txt');
-                    $(this).attr('href','data:text/octet-stream;base64,' + exportData);
-                } 
+                    $(this).attr('download', 'export_' + val + '.txt');
+                    $(this).attr('href', 'data:text/octet-stream;base64,' + exportData);
+                }
             });
 
             $('#upload').click(function () {
-                var form = $('#ingressFilesForm')[0];
+                var form = $('#ingress_files_form')[0];
                 var data = new FormData(form);
 
                 var val = $('input[name=options]:checked').val();
 
                 $.ajax({
                     type: "POST",
-                    enctype: 'multipart/form-data',
+                    enctype: "multipart/form-data",
                     url: "api/Ingress/actions",
                     data: data,
                     processData: false,
@@ -156,15 +160,37 @@
                     timeout: 300000, // 5 mins max
                     success: function (data) {
                         //console.log("SUCCESS : ", data);
-                        if(data == null) {
+                        if (data == null) {
                             console.log("DATA IS NULL");
                             return;
                         }
+
                         hmData = data;
-                        if(hmData[val] == undefined) {
-                            console.log("DATA FOR '" + val +"'IS ABSENT");
+                        if (hmData["upc"] == undefined || hmData["upv"] == undefined) {
+                            console.log("DATA IS ABSENT");
                             return;
                         }
+
+                        var rate = hmData["upc"].length / hmData["upv"].length * 100;
+                        $('#rate').text("UPC/UPV ratio = " + rate.toFixed(2) + "%");
+                        
+                        var diff = {};
+                        hmData["upv"].forEach(function(element) {
+                            diff[element] = true;
+                        });
+                        hmData["upc"].forEach(function(element) {
+                            if(diff[element]) {
+                                diff[element] = false;
+                            }
+                        });
+                        hmData["diff"] = [];
+                        Object.keys(diff).forEach(key => {
+                            if(diff[key]) {
+                                var a = key.split(',');
+                                hmData["diff"].push([a[0], a[1]]);
+                            }
+                        });
+
                         heat.setLatLngs(hmData[val]);
                     },
                     error: function (e, textStatus) {
