@@ -25,6 +25,14 @@
             height: 480px;
         }
 
+        #ingressFiles {
+            padding-top: 15px;
+        }
+
+        #download_iitc {
+            margin-top: 10px;
+        }
+
         .card-centered {
             width: 100%;
             margin: auto;
@@ -55,26 +63,22 @@
                         </label>
                     </div>
                 </div>
-                <div class="col-md-10">
+                <div class="col-md-3">
                     <form method="POST" enctype="multipart/form-data" id="ingressFilesForm">
                         <div class="form-group">
                             <!-- <label for="ingressFiles">Your game_log.stv</label> -->
-                            <input type="file" class="form-control-file" id="ingressFiles" name="ingressFiles" style="padding-top: 15px;">
+                            <input type="file" class="form-control-file" id="ingressFiles" name="ingressFiles">
                         </div>
                     </form>
-                    <a id="upload" href="#" class="btn btn-outline-primary">Upload</a>
+                    <a id="upload" href="#" class="btn btn-outline-secondary">Upload</a>
                     <img src="img/loader.gif" id="loading" style="display: none;" />
+                </div>
+                <div class="col-md-7">
+                    <a id="download_iitc" href="#" class="btn btn-secondary">Export to IITC</a>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- <script src="myportals.js"></script> -->
-
-    <script>
-        // addressPoints = addressPoints.map(function (p) { return [p[0], p[1]]; });
-        // var heat = L.heatLayer(addressPoints).addTo(map);
-    </script>
 
     <!-- SCRIPTS -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
@@ -87,21 +91,22 @@
 
     <script>
         var hmData = {};
+        var exportIitcData = {};
 
         $(document).ready(function () {
             $('body').bootstrapMaterialDesign();
             $.ajaxSetup({
                 beforeSend: function () {
-                    $("#loading").show();
-                    $("#upload").hide();
+                    $('#loading').show();
+                    $('#upload').hide();
                 },
                 complete: function () {
-                    $("#loading").hide();
-                    $("#upload").show();
+                    $('#loading').hide();
+                    $('#upload').show();
                 }
             });
 
-            $("#error_msg").hide();
+            $('#error_msg').hide();
 
             var map = L.map('map').setView([48.8588536, 2.3119549], 12);
             var tiles = L.tileLayer(
@@ -112,12 +117,21 @@
                 }).addTo(map);
             var heat = L.heatLayer([], { radius: 15, minOpacity: 0.3 }).addTo(map);
 
-
             $('input[name=options]').change(function () {
                 var data = hmData[$(this).val()];
                 if (data != undefined) {
                     heat.setLatLngs(data);
                 }
+            });
+
+            $('#download_iitc').click(function() {
+                var val = $('input[name=options]:checked').val();
+                var exportData = exportIitcData[val];
+                if(data != undefined) {
+                    $(this).attr('href','data:text/octet-stream;base64,' + exportData);
+                    $(this).attr('download', 'export_iitc_' + val + '.txt');
+                    $(this).attr('target', '_blank');
+                } 
             });
 
             $('#upload').click(function () {
@@ -138,13 +152,16 @@
                     timeout: 300000, // 5 mins max
                     success: function (data) {
                         //console.log("SUCCESS : ", data);
+                        heat.setLatLngs(data);
                         hmData[val] = data;
-                        heat.setLatLngs(hmData[val]);
+                        exportIitcData[val] = btoa(data.map(function(v) {
+                            return v[0] + ";" + v[1];
+                        }).join("\r\n"));
                     },
                     error: function (e, textStatus) {
                         console.log("ERROR : ", e);
-                        $("#error_msg").text(textStatus);
-                        $("#error_msg").show();
+                        $('#error_msg').text(textStatus);
+                        $('#error_msg').show();
                     }
                 });
             });
