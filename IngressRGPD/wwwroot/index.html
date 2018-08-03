@@ -126,11 +126,13 @@
 
             $('#download_iitc').click(function() {
                 var val = $('input[name=options]:checked').val();
-                var exportData = exportIitcData[val];
-                if(exportData != undefined) {
-                    $(this).attr('href','data:text/octet-stream;base64,' + exportData);
-                    $(this).attr('download', 'export_iitc_' + val + '.txt');
+                var exportData = btoa(hmData[val].map(function(v) {
+                            return v[0] + ";" + v[1];
+                        }).join("\r\n"));                
+                if(exportData != null && exportData !== "") {
                     $(this).attr('target', '_blank');
+                    $(this).attr('download', 'export_iitc_' + val + '.txt');
+                    $(this).attr('href','data:text/octet-stream;base64,' + exportData);
                 } 
             });
 
@@ -139,12 +141,11 @@
                 var data = new FormData(form);
 
                 var val = $('input[name=options]:checked').val();
-                var url = "api/Ingress/" + val;
 
                 $.ajax({
                     type: "POST",
                     enctype: 'multipart/form-data',
-                    url: url,
+                    url: "api/Ingress/actions",
                     data: data,
                     processData: false,
                     contentType: false,
@@ -152,11 +153,16 @@
                     timeout: 300000, // 5 mins max
                     success: function (data) {
                         //console.log("SUCCESS : ", data);
-                        heat.setLatLngs(data);
-                        hmData[val] = data;
-                        exportIitcData[val] = btoa(data.map(function(v) {
-                            return v[0] + ";" + v[1];
-                        }).join("\r\n"));
+                        if(data == null) {
+                            console.log("DATA IS NULL");
+                            return;
+                        }
+                        hmData = data;
+                        if(hmData[val] == undefined) {
+                            console.log("DATA FOR '" + val +"'IS ABSENT");
+                            return;
+                        }
+                        heat.setLatLngs(hmData[val]);
                     },
                     error: function (e, textStatus) {
                         console.log("ERROR : ", e);

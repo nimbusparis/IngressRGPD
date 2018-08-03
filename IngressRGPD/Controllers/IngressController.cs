@@ -15,19 +15,20 @@ namespace IngressRGPD.Controllers
     {
         private const string None = "None";
 
-        [HttpPost("{kindVisit}")]
+        [HttpPost("actions")]
         [DisableRequestSizeLimit]
-        public IActionResult ParseGameAction(string kindVisit, IFormFile ingressFiles)
+        public IActionResult ParseGameAction(IFormFile ingressFiles)
         {
-            ISet<LatLng> a = new HashSet<LatLng>();
             var file = ingressFiles;
             double lat, lng;
+            ISet<LatLng> upv = new HashSet<LatLng>(0);
+            ISet<LatLng> upc = new HashSet<LatLng>(0);
             //foreach (var file in ingressFiles)
             {
                 using (var fileStream = file.OpenReadStream())
+                using (var reader = new StreamReader(fileStream))
                 {
                     var actions = new Dictionary<string, ISet<LatLng>>();
-                    var reader = new StreamReader(fileStream);
                     // Strip header
                     string line = null;
                     reader.ReadLine();
@@ -46,25 +47,24 @@ namespace IngressRGPD.Controllers
 
                         actions[splittedLine[3]].Add(new LatLng(lat, lng));
                     }
-                    switch (kindVisit)
-                    {
-                        case "upc":
-                            a = actions["captured portal"];
-                            break;
-                        case "upv":
-                            a = actions["hacked friendly portal"];
-                            a.UnionWith(actions["created link"]);
-                            a.UnionWith(actions["captured portal"]);
-                            a.UnionWith(actions["resonator deployed"]);
-                            a.UnionWith(actions["resonator upgraded"]);
-                            a.UnionWith(actions["hacked enemy portal"]);
-                            a.UnionWith(actions["hacked neutral portal"]);
-                            break;
-                    }
+
+                    upc.UnionWith(actions["captured portal"]);
+
+                    upv.UnionWith(actions["hacked friendly portal"]);
+                    upv.UnionWith(actions["created link"]);
+                    upv.UnionWith(actions["captured portal"]);
+                    upv.UnionWith(actions["resonator deployed"]);
+                    upv.UnionWith(actions["resonator upgraded"]);
+                    upv.UnionWith(actions["hacked enemy portal"]);
+                    upv.UnionWith(actions["hacked neutral portal"]);
                 }
             }
 
-            return Ok(a.Select(l => new[] { l.Lat, l.Lng }));
+            return Ok(new 
+            {
+                upc = upc.Select(l => new[] { l.Lat, l.Lng }),
+                upv = upv.Select(l => new[] { l.Lat, l.Lng })
+            });
         }
     }
 }
