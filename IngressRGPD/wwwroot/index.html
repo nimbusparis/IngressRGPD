@@ -91,7 +91,6 @@
 
     <script>
         var hmData = {};
-        var exportIitcData = {};
 
         $(document).ready(function () {
             $('body').bootstrapMaterialDesign();
@@ -126,6 +125,10 @@
 
             $('#download_iitc').click(function() {
                 var val = $('input[name=options]:checked').val();
+                if(hmData[val] == undefined) {
+                    console.log("DATA FOR '" + val +"'IS ABSENT");
+                    return;
+                }                
                 var exportData = btoa(hmData[val].map(function(v) {
                             return v[0] + ";" + v[1];
                         }).join("\r\n"));                
