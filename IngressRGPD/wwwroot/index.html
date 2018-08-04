@@ -75,7 +75,7 @@
                             <input type="radio" name="options" id="diff" value="diff" autocomplete="off"> UPC/UPV Difference
                         </label>
                     </div>
-                    <div id="rate"></div>
+                    <div id="ratio"></div>
                 </div>
                 <div class="col-md-5">
                     <a id="export" href="#" class="btn btn-secondary">Export</a>
@@ -96,6 +96,15 @@
     <script>
         var hmData = {};
 
+        function showError(textStatus) {
+            $('#error_msg').text(textStatus);
+            $('#error_msg').show();            
+        }
+
+        function hideError() {
+            $('#error_msg').hide();
+        }
+
         $(document).ready(function () {
             $.ajaxSetup({
                 beforeSend: function () {
@@ -108,7 +117,8 @@
                 }
             });
             $('body').bootstrapMaterialDesign();
-            $('#error_msg').hide();
+            
+            hideError();
 
             var map = L.map('map').setView([48.8588536, 2.3119549], 12);
             var tiles = L.tileLayer(
@@ -140,7 +150,7 @@
             $('#export').click(function () {
                 var val = $('input[name=options]:checked').val();
                 if (hmData[val] == undefined) {
-                    console.log("DATA FOR '" + val + "'IS ABSENT");
+                    showError("data for '" + val + "' is absent");
                     return;
                 }
                 var exportData = btoa(hmData[val].map(function (v) {
@@ -155,15 +165,13 @@
 
             $('#upload').click(function () {
                 var form = $('#ingress_files_form')[0];
-                var data = new FormData(form);
-
-                var val = $('input[name=options]:checked').val();
+                var fdata = new FormData(form);
 
                 $.ajax({
                     type: "POST",
                     enctype: "multipart/form-data",
                     url: "api/Ingress/actions",
-                    data: data,
+                    data: fdata,
                     processData: false,
                     contentType: false,
                     cache: false,
@@ -171,18 +179,18 @@
                     success: function (data) {
                         //console.log("SUCCESS : ", data);
                         if (data == null) {
-                            console.log("DATA IS NULL");
+                            showError("data is null");
                             return;
                         }
-
-                        hmData = data;
                         if (hmData["upc"] == undefined || hmData["upv"] == undefined) {
-                            console.log("DATA IS ABSENT");
+                            showError("data is absent");
                             return;
                         }
-
-                        var rate = hmData["upc"].length / hmData["upv"].length * 100;
-                        $('#rate').text("UPC/UPV ratio = " + rate.toFixed(2) + "%");
+                        
+                        hmData = data;
+                        
+                        var ratio = hmData["upc"].length / hmData["upv"].length * 100;
+                        $('#ratio').text("UPC/UPV ratio = " + ratio.toFixed(2) + "%");
 
                         var diff = {};
                         hmData["upv"].forEach(function (element) {
@@ -194,13 +202,14 @@
                             }
                         });
                         hmData["diff"] = [];
-                        Object.keys(diff).forEach(key => {
+                        Object.keys(diff).forEach(function (key) {
                             if (diff[key]) {
                                 var a = key.split(',');
                                 hmData["diff"].push([a[0], a[1]]);
                             }
                         });
 
+                        var val = $('input[name=options]:checked').val();
                         heat.setLatLngs(hmData[val]);
 
                         if (localStorage) {
@@ -208,14 +217,23 @@
                         }
                     },
                     error: function (e, textStatus) {
+                        showError(textStatus);
                         console.log("ERROR : ", e);
-                        $('#error_msg').text(textStatus);
-                        $('#error_msg').show();
                     }
                 });
             });
         });
     </script>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-48084900-3"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'UA-48084900-3');
+    </script>    
 </body>
 
 </html>
