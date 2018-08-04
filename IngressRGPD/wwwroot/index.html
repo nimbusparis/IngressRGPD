@@ -183,13 +183,14 @@
                     cache: false,
                     timeout: 300000, // 5 mins max
                     success: function (data) {
-                        //console.log("SUCCESS : ", data);
                         if (data == null) {
                             showError("data is null");
+                            console.log("SUCCESS : ", data);
                             return;
                         }
-                        if (hmData["upc"] == undefined || hmData["upv"] == undefined) {
+                        if (data["upc"] == undefined || data["upv"] == undefined) {
                             showError("data is absent");
+                            console.log("SUCCESS : ", data);
                             return;
                         }
 
