@@ -98,7 +98,7 @@
 
         function showError(textStatus) {
             $('#error_msg').text(textStatus);
-            $('#error_msg').show();            
+            $('#error_msg').show();
         }
 
         function hideError() {
@@ -117,17 +117,20 @@
                 }
             });
             $('body').bootstrapMaterialDesign();
-            
+
             hideError();
 
-            var map = L.map('map').setView([48.8588536, 2.3119549], 12);
+            var map = L.map('map').setView([48.8588536, 2.3119549], 2); // Paris by default
             var tiles = L.tileLayer(
                 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}{r}.png', {
                     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
                     subdomains: 'abcd',
                     maxZoom: 19
                 }).addTo(map);
-            var heat = L.heatLayer([], { radius: 15, minOpacity: 0.3 }).addTo(map);
+            var heat = L.heatLayer([], {
+                radius: 15,
+                minOpacity: 0.3
+            }).addTo(map);
 
             if (localStorage) {
                 var data = localStorage.getItem("hm-data");
@@ -136,6 +139,9 @@
                     var val = $('input[name=options]:checked').val();
                     if (hmData[val] != undefined) {
                         heat.setLatLngs(hmData[val]);
+                    }
+                    if (hmData["central"] != undefined) {
+                        map.setView(hmData["central"]);
                     }
                 }
             }
@@ -186,9 +192,9 @@
                             showError("data is absent");
                             return;
                         }
-                        
+
                         hmData = data;
-                        
+
                         var ratio = hmData["upc"].length / hmData["upv"].length * 100;
                         $('#ratio').text("UPC/UPV ratio = " + ratio.toFixed(2) + "%");
 
@@ -208,6 +214,10 @@
                                 hmData["diff"].push([a[0], a[1]]);
                             }
                         });
+
+                        if (hmData["central"] != undefined) {
+                            map.flyTo(hmData["central"]);
+                        }
 
                         var val = $('input[name=options]:checked').val();
                         heat.setLatLngs(hmData[val]);
@@ -229,11 +239,14 @@
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-48084900-3"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
+
+        function gtag() {
+            dataLayer.push(arguments);
+        }
         gtag('js', new Date());
 
         gtag('config', 'UA-48084900-3');
-    </script>    
+    </script>
 </body>
 
 </html>
