@@ -122,7 +122,7 @@
             if (localStorage) {
                 var data = localStorage.getItem("hm-data");
                 if (data != undefined) {
-                    hmData = data;
+                    hmData = JSON.parse(data);
                     var val = $('input[name=options]:checked').val();
                     if (hmData[val] != undefined) {
                         heat.setLatLngs(hmData[val]);
@@ -204,7 +204,7 @@
                         heat.setLatLngs(hmData[val]);
 
                         if (localStorage) {
-                            localStorage.setItem("hm-data", hmData);
+                            localStorage.setItem("hm-data", JSON.stringify(hmData));
                         }
                     },
                     error: function (e, textStatus) {
