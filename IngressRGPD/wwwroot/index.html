@@ -73,13 +73,13 @@
                         </label>
                         <label class="btn btn-secondary">
                             <input type="radio" name="options" id="diff" value="diff" autocomplete="off"> UPC/UPV Difference
-                        </label>            
+                        </label>
                     </div>
                     <div id="rate"></div>
                 </div>
                 <div class="col-md-5">
                     <a id="export" href="#" class="btn btn-secondary">Export</a>
-                </div>           
+                </div>
             </div>
         </div>
     </div>
@@ -97,7 +97,6 @@
         var hmData = {};
 
         $(document).ready(function () {
-            $('body').bootstrapMaterialDesign();
             $.ajaxSetup({
                 beforeSend: function () {
                     $('#loading').show();
@@ -108,7 +107,7 @@
                     $('#upload').show();
                 }
             });
-
+            $('body').bootstrapMaterialDesign();
             $('#error_msg').hide();
 
             var map = L.map('map').setView([48.8588536, 2.3119549], 12);
@@ -119,6 +118,17 @@
                     maxZoom: 19
                 }).addTo(map);
             var heat = L.heatLayer([], { radius: 15, minOpacity: 0.3 }).addTo(map);
+
+            if (localStorage) {
+                var data = localStorage.getItem("hm-data");
+                if (data != undefined) {
+                    hmData = data;
+                    var val = $('input[name=options]:checked').val();
+                    if (hmData[val] != undefined) {
+                        heat.setLatLngs(hmData[val]);
+                    }
+                }
+            }
 
             $('input[name=options]').change(function () {
                 var data = hmData[$(this).val()];
@@ -173,25 +183,29 @@
 
                         var rate = hmData["upc"].length / hmData["upv"].length * 100;
                         $('#rate').text("UPC/UPV ratio = " + rate.toFixed(2) + "%");
-                        
+
                         var diff = {};
-                        hmData["upv"].forEach(function(element) {
+                        hmData["upv"].forEach(function (element) {
                             diff[element] = true;
                         });
-                        hmData["upc"].forEach(function(element) {
-                            if(diff[element]) {
+                        hmData["upc"].forEach(function (element) {
+                            if (diff[element]) {
                                 diff[element] = false;
                             }
                         });
                         hmData["diff"] = [];
                         Object.keys(diff).forEach(key => {
-                            if(diff[key]) {
+                            if (diff[key]) {
                                 var a = key.split(',');
                                 hmData["diff"].push([a[0], a[1]]);
                             }
                         });
 
                         heat.setLatLngs(hmData[val]);
+
+                        if (localStorage) {
+                            localStorage.setItem("hm-data", hmData);
+                        }
                     },
                     error: function (e, textStatus) {
                         console.log("ERROR : ", e);
