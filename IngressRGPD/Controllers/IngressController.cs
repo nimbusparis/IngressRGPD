@@ -15,6 +15,45 @@ namespace IngressRGPD.Controllers
     {
         private const string None = "None";
 
+        private static LatLng GetCentralGeoCoordinate(ISet<LatLng> geoCoordinates)
+        {
+            if (geoCoordinates.Count == 0)
+            {
+                return default(LatLng);
+            }
+
+            if (geoCoordinates.Count == 1)
+            {
+                return geoCoordinates.Single();
+            }
+
+            double x = 0;
+            double y = 0;
+            double z = 0;
+
+            foreach (var geoCoordinate in geoCoordinates)
+            {
+                var latitude = geoCoordinate.Lat * Math.PI / 180;
+                var longitude = geoCoordinate.Lng * Math.PI / 180;
+
+                x += Math.Cos(latitude) * Math.Cos(longitude);
+                y += Math.Cos(latitude) * Math.Sin(longitude);
+                z += Math.Sin(latitude);
+            }
+
+            var total = geoCoordinates.Count;
+
+            x = x / total;
+            y = y / total;
+            z = z / total;
+
+            var centralLongitude = Math.Atan2(y, x);
+            var centralSquareRoot = Math.Sqrt(x * x + y * y);
+            var centralLatitude = Math.Atan2(z, centralSquareRoot);
+
+            return new LatLng(centralLatitude * 180 / Math.PI, centralLongitude * 180 / Math.PI);
+        }
+
         [HttpPost("actions")]
         [DisableRequestSizeLimit]
         public IActionResult ParseGameAction(IFormFile ingressFiles)
@@ -60,10 +99,13 @@ namespace IngressRGPD.Controllers
                 }
             }
 
-            return Ok(new 
+            var c = GetCentralGeoCoordinate(upv);
+
+            return Ok(new
             {
                 upc = upc.Select(l => new[] { l.Lat, l.Lng }),
-                upv = upv.Select(l => new[] { l.Lat, l.Lng })
+                upv = upv.Select(l => new[] { l.Lat, l.Lng }),
+                central = new[] { c.Lat, c.Lng }
             });
         }
     }
