@@ -211,7 +211,7 @@
                         Object.keys(diff).forEach(function (key) {
                             if (diff[key]) {
                                 var a = key.split(',');
-                                hmData["diff"].push([a[0], a[1]]);
+                                hmData["diff"].push([parseFloat(a[0]), parseFloat(a[1])]);
                             }
                         });
 
