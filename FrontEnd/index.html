@@ -1,0 +1,341 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>UPC/UPV Heatmap</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <!-- Material Design for Bootstrap fonts and icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons">
+    <!-- Material Design for Bootstrap CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/bootstrap-material-design@4.1.1/dist/css/bootstrap-material-design.min.css"
+          integrity="sha384-wXznGJNEXNG1NFsbm0ugrLFMQPWswR3lds2VeinahP8N0zJw9VWSopbjv2x7WCvX" crossorigin="anonymous">
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.3/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.3/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+    <style>
+
+        #map {
+            width: 100%;
+            height: 70%;
+        }
+
+        #ingress_files {
+            padding-top: 15px;
+        }
+
+        #export {
+            margin-top: 10px;
+        }
+
+        .card-centered {
+            width: 100%;
+            height: 100%;
+            margin: auto;
+        }
+
+        body {
+            height: 100vh;
+            padding: 2%;
+        }
+        .policy {
+            text-align: right;
+            font-size:0.8em;
+        }
+    </style>
+</head>
+<body>
+    <div class="alert alert-danger" id="error_msg" role="alert" style="display: none">
+    </div>
+    <!-- Card -->
+    <div class="card card-centered">
+        <div class="card-img-top" id="map"></div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <h5 class="card-title">UPC / UPV Heatmap</h5>
+                </div>
+                <!--<div class="col-md-2">
+                </div>-->
+                <div class="col-md-9 policy">
+                    <p>
+                        We extract data server side for performance reasons. No data is stored on the server.
+                        Source code is available <a href="https://github.com/nimbusparis/IngressRGPD">here</a>
+                    </p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <form method="POST" enctype="multipart/form-data" id="ingress_files_form">
+                        <div class="form-group">
+                            <!-- <label for="ingressFiles">Your game_log.stv</label> -->
+                            <input type="file" class="form-control-file" id="ingress_files" name="ingressFiles">
+                        </div>
+                    </form>
+                    <a id="upload" href="#" class="btn btn-outline-secondary">Upload</a>
+                    <img src="img/loader.gif" id="loading" style="display: none;" />
+                </div>
+                <div class="col-md-4">
+                    <div class="btn-group btn-group-toggle" data-toggle="buttons">
+                        <!---<label class="btn btn-secondary">
+                            <input type="radio" name="options" id="upcupv" value="upcupv" autocomplete="off" checked> UPC&UPV
+                        </label>-->
+                        <label class="btn btn-secondary active">
+                            <input type="radio" name="options" id="upc" value="upc" autocomplete="off" checked> UPC
+                        </label>
+                        <label class="btn btn-secondary">
+                            <input type="radio" name="options" id="upv" value="upv" autocomplete="off"> UPV
+                        </label>
+                        <label class="btn btn-secondary">
+                            <input type="radio" name="options" id="diff" value="diff" autocomplete="off"> UPC/UPV Difference
+                        </label>
+                    </div>
+                    <div id="ratio"></div>
+                </div>
+                <div class="col-md-5">
+                    <a id="export" href="#" class="btn btn-secondary">Export selection for heatmap plugin</a>
+                    <a id="export-uniques-gdpr" href="#" class="btn btn-secondary">Export all for uniques-gdpr plugin</a>
+                    <a id="export-JSON" href="#" class="btn btn-secondary">Export as JSON</a>
+                </div>
+            </div>
+
+
+
+        </div>
+    </div>
+    <!-- SCRIPTS -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+            crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/popper.js@1.12.6/dist/umd/popper.js" integrity="sha384-fA23ZRQ3G/J53mElWqVJEGJzU0sTs+SvzG8fXVWP+kJQ1lwFAOkcUOysnlKJC33U"
+            crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/bootstrap-material-design@4.1.1/dist/js/bootstrap-material-design.js" integrity="sha384-CauSuKpEqAFajSpkdjv3z9t8E7RlpJ1UP0lKM/+NdtSarroVKu069AlsRPKkFBz9"
+            crossorigin="anonymous"></script>
+    <script>
+        var hmData = {};
+
+        function showError(textStatus) {
+            $('#error_msg').text(textStatus);
+            $('#error_msg').show();
+        }
+
+        function hideError() {
+            $('#error_msg').hide();
+        }
+
+        $(document).ready(function () {
+            $.ajaxSetup({
+                beforeSend: function () {
+                    $('#loading').show();
+                    $('#upload').hide();
+                },
+                complete: function () {
+                    $('#loading').hide();
+                    $('#upload').show();
+                }
+            });
+            $('body').bootstrapMaterialDesign();
+
+            hideError();
+
+            var map = L.map('map').setView([48.8588536, 2.3119549], 2); // Paris by default
+            var tiles = L.tileLayer(
+                'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
+                    subdomains: 'abcd',
+                    maxZoom: 19
+                }).addTo(map);
+            var heat = L.heatLayer([], {
+                radius: 15,
+                minOpacity: 0.3
+            }).addTo(map);
+
+            if (localStorage) {
+                var data = localStorage.getItem("hm-data");
+                if (data != undefined) {
+                    hmData = JSON.parse(data);
+                    var val = $('input[name=options]:checked').val();
+                    if (hmData[val] != undefined) {
+                        heat.setLatLngs(hmData[val]);
+                    }
+                    if (hmData["central"] != undefined) {
+                        map.setView(hmData["central"]);
+                    }
+                }
+            }
+
+            $('input[name=options]').change(function () {
+                var data = hmData[$(this).val()];
+                if (data != undefined) {
+                    heat.setLatLngs(data);
+                }
+            });
+
+            $('#export').click(function () {
+                var val = $('input[name=options]:checked').val();
+                if (hmData[val] == undefined) {
+                    showError("data for '" + val + "' is absent");
+                    return;
+                }
+                var exportData = btoa(hmData[val].map(function (v) {
+                    return v[0] + ";" + v[1];
+                }).join("\r\n"));
+                if (exportData != null && exportData !== "") {
+                    $(this).attr('target', '_blank');
+                    $(this).attr('download', 'export_' + val + '.txt');
+                    $(this).attr('href', 'data:text/octet-stream;base64,' + exportData);
+                }
+            });
+
+            $('#export-uniques-gdpr').click(function () {
+                var val = "upc";
+                if (hmData[val] == undefined) {
+                    showError("data for '" + val + "' is absent");
+                    return;
+                }
+                val = "upv";
+                if (hmData[val] == undefined) {
+                    showError("data for '" + val + "' is absent");
+                    return;
+                }
+                var visits = hmData["upv"].map(function (v) {
+                    return v[0] * 1E6 + "\t" + v[1] * 1E6 + "\t" + "VISITED";
+                });
+                var captures = hmData["upc"].map(function (v) {
+                    return v[0] * 1E6 + "\t" + v[1] * 1E6 + "\t" + "CAPTURED";
+                });
+                var exportData = btoa(visits.concat(captures).join("\r\n"));
+                if (exportData != null && exportData !== "") {
+                    $(this).attr('target', '_blank');
+                    $(this).attr('download', 'export-uniques-gdpr.txt');
+                    $(this).attr('href', 'data:text/octet-stream;base64,' + exportData);
+                }
+            });
+
+            $('#export-JSON').click(function () {
+                var val = "upc";
+                if (hmData[val] == undefined) {
+                    showError("data for '" + val + "' is absent");
+                    return;
+                }
+                val = "upv";
+                if (hmData[val] == undefined) {
+                    showError("data for '" + val + "' is absent");
+                    return;
+                }
+                //var visits = hmData["upv"].map(function (v) {
+                //    return { lat: v[0], lng: v[1], visited: true };
+                //});
+                var indexedCaptures = {};//used for faster search later
+                var captures = hmData["upc"].map(function (v) {
+                    var c = { lat: v[0], lng: v[1], captured: true, visited: true };//as of 26/10/2018 captured portal is always visited
+                    indexedCaptures[(v[0] * 1E6) + '' + (v[1] * 1E6)] = c;
+                    return c;
+                });
+                var exportArray = captures;
+                //console.log(captures.length);
+                //window.exportArray = exportArray;
+                for (var i in hmData["upv"]) {
+                    var v = hmData["upv"][i];
+                    var visit = { lat: v[0], lng: v[1], visited: true, captured: false };
+                    var found = false;
+                    var c = indexedCaptures[(v[0] * 1E6) + '' + (v[1] * 1E6)];
+                    if (typeof c != "undefined") {
+                        //c.visited = true;//merge the visit and capture
+                        found = true;
+                    }
+                    if (!found) {
+                        exportArray.push(visit);
+                    }
+                }
+                //console.log(exportArray.length);
+                var exportData = btoa(JSON.stringify(exportArray));
+                if (exportData != null && exportData !== "") {
+                    $(this).attr('target', '_blank');
+                    $(this).attr('download', 'export-uniques.json');
+                    $(this).attr('href', 'data:text/octet-stream;base64,' + exportData);
+                }
+            });
+
+            $('#upload').click(function () {
+                var form = $('#ingress_files_form')[0];
+                var fdata = new FormData(form);
+
+                $.ajax({
+                    type: "POST",
+                    enctype: "multipart/form-data",
+                    url: "https://ingressrgpd.azurewebsites.net/api/SendRawData",
+                    data: fdata,
+                    processData: false,
+                    contentType: false,
+                    cache: false,
+                    timeout: 300000, // 5 mins max
+                    success: function (data) {
+                        if (data == null) {
+                            showError("data is null");
+                            console.log("SUCCESS : ", data);
+                            return;
+                        }
+                        if (data["upc"] == undefined || data["upv"] == undefined) {
+                            showError("data is absent");
+                            console.log("SUCCESS : ", data);
+                            return;
+                        }
+
+                        hmData = data;
+
+                        var ratio = hmData["upc"].length / hmData["upv"].length * 100;
+                        $('#ratio').text("UPC/UPV ratio = " + ratio.toFixed(2) + "%");
+
+                        var diff = {};
+                        hmData["upv"].forEach(function (element) {
+                            diff[element] = true;
+                        });
+                        hmData["upc"].forEach(function (element) {
+                            if (diff[element]) {
+                                diff[element] = false;
+                            }
+                        });
+                        hmData["diff"] = [];
+                        Object.keys(diff).forEach(function (key) {
+                            if (diff[key]) {
+                                var a = key.split(',');
+                                hmData["diff"].push([parseFloat(a[0]), parseFloat(a[1])]);
+                            }
+                        });
+
+                        if (hmData["central"] != undefined) {
+                            map.flyTo(hmData["central"]);
+                        }
+
+                        var val = $('input[name=options]:checked').val();
+                        heat.setLatLngs(hmData[val]);
+
+                        if (localStorage) {
+                            localStorage.setItem("hm-data", JSON.stringify(hmData));
+                        }
+                    },
+                    error: function (e, textStatus) {
+                        showError(textStatus);
+                        console.log("ERROR : ", e);
+                    }
+                });
+            });
+        });
+    </script>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-48084900-3"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+
+        function gtag() {
+            dataLayer.push(arguments);
+        }
+        gtag('js', new Date());
+
+        gtag('config', 'UA-48084900-3');
+    </script>
+</body>
+</html>

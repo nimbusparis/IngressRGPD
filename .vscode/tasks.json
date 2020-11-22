@@ -10,7 +10,10 @@
 				"/consoleloggerparameters:NoSummary"
 			],
 			"type": "process",
-			"problemMatcher": "$msCompile"
+			"problemMatcher": "$msCompile",
+			"options": {
+				"cwd": "${workspaceFolder}/Function"
+			}
 		},
 		{
 			"label": "build",
@@ -26,7 +29,10 @@
 				"kind": "build",
 				"isDefault": true
 			},
-			"problemMatcher": "$msCompile"
+			"problemMatcher": "$msCompile",
+			"options": {
+				"cwd": "${workspaceFolder}/Function"
+			}
 		},
 		{
 			"label": "clean release",
@@ -39,7 +45,10 @@
 				"/consoleloggerparameters:NoSummary"
 			],
 			"type": "process",
-			"problemMatcher": "$msCompile"
+			"problemMatcher": "$msCompile",
+			"options": {
+				"cwd": "${workspaceFolder}/Function"
+			}
 		},
 		{
 			"label": "publish",
@@ -53,13 +62,16 @@
 			],
 			"type": "process",
 			"dependsOn": "clean release",
-			"problemMatcher": "$msCompile"
+			"problemMatcher": "$msCompile",
+			"options": {
+				"cwd": "${workspaceFolder}/Function"
+			}
 		},
 		{
 			"type": "func",
 			"dependsOn": "build",
 			"options": {
-				"cwd": "${workspaceFolder}/bin/Debug/netcoreapp2.1"
+				"cwd": "${workspaceFolder}/Function/bin/Debug/netcoreapp2.1"
 			},
 			"command": "host start",
 			"isBackground": true,
